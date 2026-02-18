@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual environment
+.venv/
+
+# VS Code
+.vscode/
+
+# Environment variables / secrets
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ROS / build artifacts
+build/
+install/
+log/
+
+# Solidity / blockchain artifacts
+artifacts/
+cache/
+
+# Node (if ever used)
+node_modules/

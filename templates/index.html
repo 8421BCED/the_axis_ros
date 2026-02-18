@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🤖 Robot Commander</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .wallet-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        .command-history {
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+        .command-item {
+            background: #f1f8ff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+        .status {
+            float: right;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            min-width: 80px;
+            text-align: center;
+        }
+        .status.pending { background: #ffd700; color: #333; }
+        .status.done { background: #4CAF50; color: white; }
+        .status.error { background: #f44336; color: white; }
+        .status.paid { background: #9c27b0; color: white; }
+        .status.moving { background: #ff9800; color: white; animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        .payment-section {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            border: 2px solid #4CAF50;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* ─── Robot Joint Visualization ─── */
+        .joint-visualization {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        .joint {
+            margin: 10px 0;
+        }
+        .joint-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .joint-bar {
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .joint-fill {
+            height: 100%;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            line-height: 20px;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1> UR5 Robot Commander</h1>
+
+        <!-- Wallet Section -->
+        <div class="wallet-section">
+            <h3>Wallet Connection</h3>
+            <div id="walletInfo" style="display: none;">
+                <p>Connected: <strong id="walletAddress"></strong></p>
+                <button onclick="disconnectWallet()">Disconnect</button>
+            </div>
+            <div id="connectWallet">
+                <p>1. Copy your address from MetaMask (Ganache network)</p>
+                <input type="text" id="walletInput" placeholder="0x1234...">
+                <button onclick="connectWallet()">Connect Wallet</button>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    <small>Make sure MetaMask is on Ganache (http://127.0.0.1:8545, Chain ID 1337)</small>
+                </p>
+            </div>
+        </div>
+
+        <!-- Command Section -->
+        <div class="input-group">
+            <h3>Robot Control</h3>
+            <input type="text" id="commandInput" placeholder="Type command... (e.g., 'wave hello', 'dance', 'spin')">
+            <button onclick="sendCommand()">Execute Command</button>
+            <div style="margin-top: 10px;">
+                <button class="secondary" onclick="quickCommand('dance')"> Dance</button>
+                <button class="secondary" onclick="quickCommand('wave hello')"> Wave</button>
+                <button class="secondary" onclick="quickCommand('spin 360')"> Spin</button>
+                <button class="secondary" onclick="quickCommand('pick up')">Pick Up</button>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div id="alert" class="alert"></div>
+
+        <!-- Payment Section -->
+        <div id="paymentSection" class="payment-section">
+            <h3> Payment Required</h3>
+            <p>Amount: <strong id="paymentAmount">0.01</strong> ETH</p>
+            <p>Action: <strong id="paymentAction">robot command</strong></p>
+            <button onclick="payWithETH()">Pay with ETH (MetaMask)</button>
+            <button class="secondary" onclick="payWithBTC()">Pay with BTC</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                <small>This will open MetaMask to confirm on Ganache</small>
+            </p>
+        </div>
+
+        <!-- Command History -->
+        <div class="command-history">
+            <h3> Recent Commands</h3>
+            <div id="commandHistory"></div>
+        </div>
+
+        <!-- Robot Joint Visualization -->
+        <div id="robotVisualization" class="joint-visualization">
+            <!-- Joint bars will appear here after command execution -->
+        </div>
+    </div>
+
+    <script>
+        // ────────────────────────────────────────────────
+        // Globals
+        // ────────────────────────────────────────────────
+        let connectedWallet = null;
+        let lastCommandData = null;
+
+        // ────────────────────────────────────────────────
+        // Helpers
+        // ────────────────────────────────────────────────
+        function showAlert(message, type = 'success') {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type}`;
+            alert.style.display = 'block';
+            setTimeout(() => { alert.style.display = 'none'; }, 6000);
+        }
+
+        function addToHistory(command, status = 'pending') {
+            const historyDiv = document.getElementById('commandHistory');
+            const commandId = Date.now();
+            const div = document.createElement('div');
+            div.className = 'command-item';
+            div.id = `cmd-${commandId}`;
+            div.innerHTML = `
+                <strong>${command}</strong>
+                <span class="status ${status}">${status}</span>
+                <div style="font-size: 12px; color: #666;">
+                    Wallet: ${connectedWallet ? connectedWallet.substring(0,8)+'...' : '—'}
+                </div>
+            `;
+            historyDiv.insertBefore(div, historyDiv.firstChild);
+            return div;
+        }
+
+        function updateLastCommandStatus(newStatus) {
+            const historyDiv = document.getElementById('commandHistory');
+            if (historyDiv.children.length === 0) return;
+            const statusSpan = historyDiv.children[0].querySelector('.status');
+            if (statusSpan) {
+                statusSpan.className = `status ${newStatus.toLowerCase().replace(/ /g,'')}`;
+                statusSpan.textContent = newStatus;
+            }
+        }
+
+        // Animation for "Moving..." status
+        function updateCommandAnimation() {
+            const items = document.querySelectorAll('.status');
+            items.forEach(item => {
+                if (item.textContent.includes('Moving')) {
+                    item.textContent = item.textContent === '⏳ Moving...' ? '⏳ Moving' : '⏳ Moving...';
+                }
+            });
+        }
+        setInterval(updateCommandAnimation, 500);
+
+        // ────────────────────────────────────────────────
+        // Visualize robot joint positions
+        // ────────────────────────────────────────────────
+        function updateRobotVisualization(positions) {
+            const vis = document.getElementById('robotVisualization');
+            if (!vis || !Array.isArray(positions) || positions.length !== 6) return;
+
+            let html = '<h4 style="margin:0 0 10px;">Current Joint Positions</h4>';
+            positions.forEach((pos, i) => {
+                const angle = (pos * 180 / Math.PI).toFixed(1);
+                const width = Math.min(Math.abs(pos) * 50 + 10, 100); // scale bar width
+                const color = pos > 0 ? '#4CAF50' : (pos < 0 ? '#2196F3' : '#9e9e9e');
+
+                html += `
+                    <div class="joint">
+                        <div class="joint-label">Joint ${i+1}</div>
+                        <div class="joint-bar">
+                            <div class="joint-fill" style="width: ${width}%; background: ${color};">
+                                ${angle}°
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            vis.innerHTML = html;
+        }
+
+        // ────────────────────────────────────────────────
+        // Wallet
+        // ────────────────────────────────────────────────
+        function connectWallet() {
+            const input = document.getElementById('walletInput').value.trim();
+            if (!input || !input.startsWith('0x') || input.length !== 42) {
+                showAlert('Enter a valid 0x... Ethereum address (42 chars)', 'error');
+                return;
+            }
+
+            fetch('/connect_wallet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet_address: input })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    connectedWallet = input.toLowerCase();
+                    document.getElementById('connectWallet').style.display = 'none';
+                    document.getElementById('walletInfo').style.display = 'block';
+                    document.getElementById('walletAddress').textContent =
+                        input.substring(0,10) + '...' + input.substring(38);
+                    showAlert(data.message, 'success');
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            })
+            .catch(err => showAlert('Connection failed: ' + err.message, 'error'));
+        }
+
+        function disconnectWallet() {
+            connectedWallet = null;
+            document.getElementById('connectWallet').style.display = 'block';
+            document.getElementById('walletInfo').style.display = 'none';
+            document.getElementById('walletInput').value = '';
+            showAlert('Wallet disconnected', 'success');
+        }
+
+        // ────────────────────────────────────────────────
+        // Commands
+        // ────────────────────────────────────────────────
+        async function sendCommand() {
+            if (!connectedWallet) {
+                showAlert('Connect wallet first!', 'error');
+                return;
+            }
+
+            const command = document.getElementById('commandInput').value.trim();
+            if (!command) {
+                showAlert('Enter a command', 'error');
+                return;
+            }
+
+            addToHistory(command, 'moving');
+            document.getElementById('commandInput').value = '';
+
+            try {
+                const response = await fetch('/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: command,
+                        wallet: connectedWallet
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateLastCommandStatus('✅ Done');
+                    showAlert(`🤖 Robot is executing: ${command}`, 'success');
+
+                    // Show joint visualization if we got positions
+                    if (data.llm_response && Array.isArray(data.llm_response.joints)) {
+                        updateRobotVisualization(data.llm_response.joints);
+                        console.log('LLM planned joints:', data.llm_response.joints);
+                    }
+
+                    // Show payment after delay
+                    setTimeout(() => {
+                        document.getElementById('paymentAmount').textContent = '0.01';
+                        document.getElementById('paymentAction').textContent = data.action || command;
+                        document.getElementById('paymentSection').style.display = 'block';
+                    }, 2000);
+
+                } else {
+                    updateLastCommandStatus('❌ Failed');
+                    showAlert(data.message || 'Command failed', 'error');
+                }
+
+            } catch (error) {
+                updateLastCommandStatus('❌ Error');
+                showAlert('Network error: ' + error.message, 'error');
+            }
+        }
+
+        function quickCommand(cmd) {
+            document.getElementById('commandInput').value = cmd;
+            sendCommand();
+        }
+
+        // ────────────────────────────────────────────────
+        // Payments
+        // ────────────────────────────────────────────────
+        async function payWithETH() {
+            if (!connectedWallet) {
+                showAlert('Connect wallet first!', 'error');
+                return;
+            }
+
+            if (typeof window.ethereum === 'undefined') {
+                showAlert('Please install MetaMask!', 'error');
+                return;
+            }
+
+            const amountStr = document.getElementById('paymentAmount').textContent || "0.01";
+            const amount = parseFloat(amountStr);
+            if (isNaN(amount) || amount <= 0) {
+                showAlert('Invalid payment amount', 'error');
+                return;
+            }
+
+            const command = lastCommandData?.llm_response?.action || document.getElementById('commandInput').value || "wave hello";
+
+            showAlert('MetaMask will open for payment...');
+
+            try {
+                const amountWei = (amount * 1e18).toString(16);
+
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        from: connectedWallet,
+                        to: '0x957156a25319bcBa998A96c691048368C11ea269', // ← CHANGE TO YOUR ACTUAL CONTRACT ADDRESS
+                        value: '0x' + amountWei,
+                        gas: '0x30D40',
+                        gasPrice: '0x2E90EDD000'
+                    }]
+                });
+
+                showAlert(`✅ Payment sent! TX: ${txHash.substring(0, 10)}...`, 'success');
+                console.log('Transaction hash:', txHash);
+
+                document.getElementById('paymentSection').style.display = 'none';
+                updateLastCommandStatus('paid');
+
+                setTimeout(async () => {
+                    try {
+                        const balance = await window.ethereum.request({
+                            method: 'eth_getBalance',
+                            params: [connectedWallet, 'latest']
+                        });
+                        const balanceEth = Number(BigInt(balance)) / 1e18;
+                        showAlert(`New balance: ${balanceEth.toFixed(4)} ETH`, 'success');
+                    } catch (balErr) {
+                        console.error('Balance check failed:', balErr);
+                    }
+                }, 3000);
+
+            } catch (error) {
+                let msg = error.message || 'Transaction failed';
+                if (msg.includes('User rejected')) msg = 'You rejected the transaction in MetaMask';
+                showAlert('Payment failed: ' + msg, 'error');
+                console.error('Payment error:', error);
+            }
+        }
+
+        function payWithBTC() {
+            showAlert('BTC not supported on Ganache test network. Use ETH.', 'error');
+        }
+
+        // Auto-detect MetaMask
+        window.addEventListener('load', () => {
+            if (typeof window.ethereum !== 'undefined') {
+                console.log('MetaMask detected');
+            } else {
+                console.log('MetaMask not detected');
+            }
+        });
+    </script>
+</body>
+</html>
