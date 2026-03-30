@@ -9,7 +9,7 @@ __pycache__/
 .venv/
 
 # VS Code
-.vscode/
+.vscode/k
 
 # Environment variables / secrets
 .env
@@ -20,6 +20,7 @@ __pycache__/
 Thumbs.db
 
 # ROS / build artifacts
+
 build/
 install/
 log/
@@ -30,3 +31,8 @@ cache/
 
 # Node (if ever used)
 node_modules/
+.vscode/
+
+ros_ws/build/
+ros_ws/install/
+ros_ws/log/

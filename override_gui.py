@@ -30,7 +30,7 @@ class UltraSmoothRobotController(Node):
         self.is_active = True
         
         # Tuned parameters for faster + smooth movement
-        self.max_speed = 1.6  # rad/s - faster
+        self.max_speed = 1.10  # rad/s - faster
         self.acceleration = 0.45  # quicker ramp-up
         self.smoothing = 0.20  # responsive but controlled
         self.deadzone = 0.005  # Increased for stability
@@ -154,7 +154,7 @@ class UltraSmoothRobotController(Node):
             self.current_velocities = [0.0] * 6
             print(f"🎬 Starting: {self.current_movement['name']}")
             print(f" Target: {[round(x, 3) for x in self.target_positions]}")
-            duration = self.current_movement.get('duration', 3)
+            duration = self.current_movement.get('duration', 10)
             threading.Timer(duration, self.check_movement_completion).start()
     
     def check_movement_completion(self):
@@ -240,6 +240,7 @@ def move_robot():
         
         if len(positions) != 6:
             return jsonify({"error": "Need exactly 6 joint positions"}), 400
+        
         
         valid_positions = []
         for i, pos in enumerate(positions):

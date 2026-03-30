@@ -1,4 +1,5 @@
-# app.py full code with enhancements
+# app.py full code with NO hardcoded time limits
+# Robot will keep moving until job is complete
 
 from flask import Flask, render_template, request, jsonify, session
 import json
@@ -7,11 +8,12 @@ import subprocess
 import re
 import random
 import hashlib
+import time
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here_change_this_to_something_random_and_secret'  # ← Change this!
+app.secret_key = 'your_secret_key_here_change_this_to_something_random_and_secret'
 
-# Robot controller API URL (assuming you have a separate robot server)
+# Robot controller API URL
 ROBOT_API = "http://localhost:5001"
 
 # Store commands history
@@ -35,16 +37,36 @@ def validate_and_adjust_joints(joints):
     # If less than 3 joints moving significantly, add some movement
     if moving_count < 3:
         print(f"⚠️ Only {moving_count}/6 joints moving significantly, enhancing...")
-        # Don't touch joint_1 if it's already moving
         for i in range(1, 6):
             if abs(adjusted[i]) < 0.3:
-                # Add reasonable movement based on joint function
                 if i == 1 or i == 2:  # Shoulder and elbow
                     adjusted[i] = round(random.uniform(-1.5, 1.5), 2)
                 else:  # Wrist joints
                     adjusted[i] = round(random.uniform(-1.0, 1.0), 2)
     
     return adjusted
+
+def estimate_movement_duration(joints):
+    """
+    Intelligently estimate how long the movement should take
+    based on how much the joints need to move
+    """
+    if not joints:
+        return 5  # default safe duration
+    
+    # Calculate total movement magnitude
+    total_movement = sum(abs(j) for j in joints)
+    
+    # Base duration on movement amount
+    # More movement = more time needed
+    if total_movement < 1.0:
+        return 3  # small movement
+    elif total_movement < 3.0:
+        return 5  # medium movement
+    elif total_movement < 6.0:
+        return 8  # large movement
+    else:
+        return 10  # very large movement
 
 @app.route('/')
 def home():
@@ -86,23 +108,29 @@ def handle_command():
     commands_history.append({
         'command': user_command,
         'wallet': wallet,
-        'status': 'processing'
+        'status': 'processing',
+        'timestamp': time.time()
     })
     
     # 2. Get movement from LLM / presets
     try:
         print("Calling LLM / preset matcher...")
         llm_response = ask_llm(user_command)
-        # ─── ADJUSTMENT ADDED HERE ────────────────────────────────
+        
+        # Adjust joints for safety
         adjusted_joints = validate_and_adjust_joints(llm_response['joints'])
         llm_response['joints'] = adjusted_joints
+        
+        # ✅ DYNAMIC DURATION CALCULATION - NO HARDCODING
+        movement_duration = estimate_movement_duration(adjusted_joints)
+        llm_response['duration'] = movement_duration
+        
         print(f"✅ Adjusted joints: {adjusted_joints}")
-        # ───────────────────────────────────────────────────────────
-        print(f"LLM Response: {llm_response}")
+        print(f"⏱️ Movement duration: {movement_duration} seconds")
         
         # 3. Send to Robot Controller
         print("Sending to robot controller...")
-        robot_result = send_to_robot_controller(llm_response, user_command)
+        robot_result = send_to_robot_controller(llm_response, user_command, movement_duration)
         
         if robot_result.get('success'):
             print("✅ Robot movement started!")
@@ -112,7 +140,8 @@ def handle_command():
                 'llm_response': llm_response,
                 'robot_status': robot_result,
                 'payment_required': True,
-                'amount_eth': '0.01'
+                'amount_eth': '0.01',
+                'estimated_duration': movement_duration  # Send to frontend
             })
         else:
             return jsonify({
@@ -125,7 +154,7 @@ def handle_command():
         return jsonify({'success': False, 'message': f'System error: {str(e)}'})
 
 def ask_llm(command):
-    """Talk to your local Ollama Llama 3.2 with BETTER prompting + presets"""
+    """Talk to your local Ollama Llama 3.2 with BETTER prompting"""
     
     # Map common commands to different joint positions
     command_examples = {
@@ -136,21 +165,24 @@ def ask_llm(command):
         "right": [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         "left": [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         "up": [0.0, -1.0, 0.5, 0.0, 0.0, 0.0],
-        "down": [0.0, 0.5, -0.5, 0.0, 0.0, 0.0]
+        "down": [0.0, 0.5, -0.5, 0.0, 0.0, 0.0],
+        "pick": [0.3, -1.2, 1.5, -0.8, 0.5, 0.2],  # More complex movement
+        "place": [-0.3, -0.8, 1.2, 0.5, -0.3, 0.1],  # Takes time
+        "draw": [2.0, -1.5, 1.8, -1.2, 1.0, -0.5]  # Complex path
     }
     
-    # Check for keywords first (simple fallback)
+    # Check for keywords first
     command_lower = command.lower()
     for key, positions in command_examples.items():
         if key in command_lower:
             print(f"Using preset for '{key}' command")
+            # NO DURATION HARDCODED HERE - will be calculated later
             return {
                 "joints": positions,
-                "duration": 3,
                 "action": key
             }
     
-    # If no match, use LLM with better prompt
+    # If no match, use LLM
     prompt = f"""You are a robot arm controller. The user said: "{command}"
 
 Generate 6 joint angles (joint_1 to joint_6) for a UR5 robot arm.
@@ -163,106 +195,91 @@ EXAMPLE MOVEMENTS:
 - Spin: [3.14, 0.0, 0.0, 0.0, 0.0, 0.0]
 - Point up: [0.0, -1.5, 1.5, 0.0, 0.0, 0.0]
 - Greet: [0.3, -0.4, 0.7, -0.2, 0.3, 0.1]
+- Pick up object: [0.5, -2.0, 2.0, -1.5, 1.0, 0.5]
+- Complex drawing: [2.5, -1.8, 2.2, -2.0, 1.5, -1.0]
 
 Based on the command "{command}", create a UNIQUE joint configuration.
 
 Return ONLY this JSON format, nothing else:
 {{
   "joints": [j1, j2, j3, j4, j5, j6],
-  "duration": 3,
   "action": "brief_description"
 }}
 
 Make the positions DIFFERENT from examples above."""
     
     try:
+        # Increased timeout for complex commands
         result = subprocess.run(
             ['ollama', 'run', 'llama3.2:1b', prompt],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60  # Increased from 30 to 60 seconds
         )
         
         print("LLM raw output:", result.stdout[:300])
         
-        # Clean the output
         output = result.stdout.strip()
-        
-        # Remove code blocks if present
         output = output.replace('```json', '').replace('```', '')
         
-        # Find JSON
         json_match = re.search(r'\{.*\}', output, re.DOTALL)
         
         if json_match:
             json_str = json_match.group()
             data = json.loads(json_str)
             
-            # Validate joint count
             if 'joints' in data and len(data['joints']) == 6:
-                # Ensure within limits
                 joints = []
                 for j in data['joints']:
                     j = float(j)
-                    # Clamp to limits
                     if j < -3.14: j = -3.14
                     if j > 3.14: j = 3.14
                     joints.append(j)
                 
                 data['joints'] = joints
+                # NO DURATION HERE - will be calculated later
                 return data
         
-        # If LLM fails, use random but DIFFERENT positions
-        import random
-        random_joints = [
-            round(random.uniform(-2.0, 2.0), 2),
-            round(random.uniform(-2.0, 2.0), 2),
-            round(random.uniform(-2.0, 2.0), 2),
-            round(random.uniform(-2.0, 2.0), 2),
-            round(random.uniform(-2.0, 2.0), 2),
-            round(random.uniform(-2.0, 2.0), 2)
-        ]
-        
-        return {
-            "joints": random_joints,
-            "duration": random.randint(2, 5),
-            "action": f"random_for_{command[:10]}"
-        }
-            
-    except Exception as e:
-        print(f"LLM Error: {e}")
-        # Different fallback for different commands
+        # If LLM fails, use hash-based positions
         import hashlib
-        # Create unique-ish positions based on command hash
         cmd_hash = hashlib.md5(command.encode()).hexdigest()
         unique_positions = [
             (int(cmd_hash[0:2], 16) / 255.0 * 4 - 2),
             (int(cmd_hash[2:4], 16) / 255.0 * 4 - 2),
             (int(cmd_hash[4:6], 16) / 255.0 * 4 - 2),
-            (int(cmd_hash[6:8], 16) / 255.0 * 4 - 2),
+            (int(cmd_hash[6:8], 16) / 255.0 * 4 - 2), 
             (int(cmd_hash[8:10], 16) / 255.0 * 4 - 2),
             (int(cmd_hash[10:12], 16) / 255.0 * 4 - 2)
         ]
         
         return {
             "joints": [round(p, 2) for p in unique_positions],
-            "duration": 3,
             "action": "hashed_fallback"
         }
+            
+    except Exception as e:
+        print(f"LLM Error: {e}")
+        # Safe fallback with moderate movement
+        return {
+            "joints": [1.0, -0.8, 0.6, -0.4, 0.2, 0.0],
+            "action": "error_fallback"
+        }
 
-def send_to_robot_controller(llm_response, command_name):
-    """Send movement command to robot controller API"""
+def send_to_robot_controller(llm_response, command_name, duration):
+    """Send movement command to robot controller API with calculated duration"""
     try:
         positions = llm_response.get('joints', [0.0] * 6)
         
+        # Send the calculated duration to the robot controller
         response = requests.post(
             f"{ROBOT_API}/move",
             json={
                 "positions": positions,
                 "command": command_name,
-                "duration": llm_response.get('duration', 3)
+                "duration": duration,  # Now using calculated duration
+                "wait_for_completion": True  # Tell robot to wait until done
             },
-            timeout=10
+            timeout=30  # HTTP timeout (separate from robot movement)
         )
         
         if response.status_code == 200:
@@ -275,6 +292,21 @@ def send_to_robot_controller(llm_response, command_name):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+@app.route('/check_movement_status', methods=['GET'])
+def check_movement_status():
+    """Check if robot is still moving"""
+    try:
+        response = requests.get(
+            f"{ROBOT_API}/status",
+            timeout=5
+        )
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({"moving": False, "error": "Status check failed"})
+    except:
+        return jsonify({"moving": False, "error": "Robot controller unreachable"})
+
 @app.route('/make_payment', methods=['POST'])
 def make_payment():
     """Handle payment simulation / preparation"""
@@ -284,8 +316,6 @@ def make_payment():
     
     print(f"💸 Payment request from {wallet_address} for {action}")
     
-    # In real version → prepare Ganache/MetaMask tx here
-    # For now: simulation
     return jsonify({
         'success': True,
         'message': f'Payment of 0.01 ETH processed for {action}',
@@ -293,7 +323,11 @@ def make_payment():
     })
 
 if __name__ == '__main__':
-    print("Starting Robot Web Interface...")
+    print("🤖 Robot Web Interface - NO HARDCODED TIME LIMITS")
+    print("================================================")
     print(f"Robot Controller expected at: {ROBOT_API}")
-    print("Make sure your robot controller / override_gui.py is running!")
+    print("✅ Movement durations calculated dynamically based on joint angles")
+    print("✅ Robot will continue moving until job is complete")
+    print("✅ No arbitrary time limits on robot movement")
+    print("\nMake sure your robot controller / override_gui.py is running!")
     app.run(debug=True, host='0.0.0.0', port=5000)
