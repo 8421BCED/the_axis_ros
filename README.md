@@ -38,6 +38,29 @@ text
 
 ---
 
+## Sponsors
+
+<table width="100%">
+  <tr>
+    <td width="50%" align="center">
+      <img src="static/hdeth.png" height="80">
+      <br>
+      <strong>Supported by Ethereum Foundation</strong>
+     </td>
+    <td width="50%" align="center">
+      <img src="static/tsion.jpeg" height="80">
+      <br>
+      <strong>Built by Tsion Dynamics</strong>
+     </td>
+  </tr>
+</table>
+
+<p align="center">
+  <em>Special thanks to the Ethereum community for the vision and support that made this project possible.</em>
+</p>
+
+---
+
 ## Features
 
 | Category | Description |
@@ -108,6 +131,7 @@ text
 ├── launch_robot_no_gui.sh      # Headless launch script
 ├── static/                     # Images and media
 │   ├── tsion.jpeg              # Brand logo
+│   ├── hdeth.png               # Ethereum sponsor logo
 │   ├── screen.png              # Screenshot 1
 │   ├── image.png               # Screenshot 2
 │   └── cast.mp4                # Demo video
@@ -136,9 +160,12 @@ smooth_robot_controller.py	Implements smooth motion planning
 override_gui.py	Custom GUI overrides for manual control
 RobotPayment.sol	Solidity smart contract for ETH payments
 app.py	Flask backend server
+Acknowledgments
+
+This project draws inspiration from the Ethereum community's vision for decentralized robotic control systems. The integration of blockchain technology with industrial robotics opens new possibilities for secure, transparent, and programmable automation.
 License
 
 MIT License
 
 Copyright (c) Tsion Dynamics
-<p align="center"> <strong>Built by Tsion Dynamics</strong><br> Supported by Ethereum Foundation </p><p align="center"> <a href="#">Documentation</a> &nbsp; • &nbsp; <a href="#">Issues</a> &nbsp; • &nbsp; <a href="#">Discord</a> </p> ```
+<p align="center"> <strong>Built by Tsion Dynamics</strong><br> Supported by Ethereum Foundation </p><p align="center"> <a href="#">Documentation</a> &nbsp; • &nbsp; <a href="#">Issues</a> &nbsp; • &nbsp; <a href="#">Discord</a>
