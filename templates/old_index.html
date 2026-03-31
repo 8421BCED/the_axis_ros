@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>UR5 • Robot Commander</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* professional, smoke-white / clean corporate */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f7fc;  /* soft smoke-white base */
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 720px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -12px rgba(0,20,40,0.25);
+            padding: 32px;
+            border: 1px solid #eaedf2;
+        }
+
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            color: #1a2639;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 span {
+            background: #1a2639;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 400;
+            padding: 4px 12px;
+            border-radius: 40px;
+            letter-spacing: 0.3px;
+        }
+
+        h3 {
+            font-weight: 500;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #eef2f6;
+            padding-bottom: 8px;
+        }
+
+        /* wallet card with balance */
+        .wallet-section {
+            background: #f9fbfd;
+            border-radius: 18px;
+            padding: 20px 24px;
+            margin: 24px 0 28px 0;
+            border: 1px solid #e2e9f2;
+        }
+
+        .wallet-section h3 {
+            margin-top: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+            font-weight: 500;
+            color: #1e2b3c;
+        }
+
+        #walletInfo p {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            color: #2d3f56;
+            flex-wrap: wrap;
+        }
+
+        #walletAddress {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #d0ddee;
+            color: #0b1c2e;
+        }
+
+        #walletBalance {
+            background: #e8f0fe;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #b9d1f0;
+            color: #1e3e6e;
+            font-weight: 600;
+        }
+
+        #connectWallet input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid #cfddee;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            background: white;
+            transition: 0.2s;
+            margin-bottom: 12px;
+        }
+
+        #connectWallet input:focus {
+            outline: none;
+            border-color: #3a7bd5;
+            box-shadow: 0 0 0 3px rgba(58,123,213,0.08);
+        }
+
+        /* buttons */
+        button {
+            background: #1e2f4a;
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            font-size: 0.95rem;
+            font-weight: 450;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+            margin: 0 6px 6px 0;
+            box-shadow: 0 2px 6px rgba(0,20,40,0.08);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        button:hover {
+            background: #253c5c;
+            box-shadow: 0 8px 14px -8px rgba(20,60,120,0.3);
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #ffffff;
+            color: #1e2f4a;
+            border: 1px solid #c8d5e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        button.secondary:hover {
+            background: #f2f7ff;
+            border-color: #7e9bc8;
+            box-shadow: 0 4px 8px rgba(58,100,150,0.1);
+            transform: translateY(-1px);
+        }
+
+        .input-group {
+            margin: 24px 0;
+        }
+
+        #commandInput {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 1rem;
+            border: 1px solid #dae2ed;
+            border-radius: 18px;
+            background: white;
+            transition: 0.2s;
+            margin-bottom: 16px;
+        }
+
+        #commandInput:focus {
+            border-color: #3a7bd5;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(58,123,213,0.08);
+        }
+
+        .quick-commands {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        /* alert */
+        .alert {
+            padding: 16px 22px;
+            border-radius: 60px;
+            margin: 20px 0;
+            display: none;
+            font-weight: 450;
+            background: #f1f9f0;
+            color: #1d5a3e;
+            border: 1px solid #a8d5b5;
+            font-size: 0.95rem;
+        }
+        .alert.error {
+            background: #fee9e7;
+            color: #a12b2b;
+            border-color: #fbb4b4;
+        }
+
+        /* payment card */
+        .payment-section {
+            background: #f2f7ff;
+            border: 1px solid #bfd6f0;
+            border-radius: 20px;
+            padding: 20px 26px;
+            margin: 28px 0 20px;
+            display: none;
+        }
+
+        .payment-section h3 {
+            color: #1e3e6e;
+            border-bottom: none;
+            margin-top: 0;
+            padding-bottom: 4px;
+        }
+
+        .payment-section p {
+            color: #1a2f48;
+            margin: 12px 0;
+        }
+
+        .payment-section strong {
+            font-weight: 600;
+            background: #ffffffb0;
+            padding: 4px 12px;
+            border-radius: 30px;
+            border: 1px solid #b9d1f0;
+        }
+
+        /* command history */
+        .command-history {
+            margin: 32px 0 10px;
+            background: #fafcff;
+            border-radius: 20px;
+            padding: 8px 0;
+        }
+
+        .command-item {
+            background: #ffffff;
+            padding: 14px 18px;
+            margin: 10px 0;
+            border-radius: 16px;
+            border: 1px solid #e6ecf5;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 6px #eef3f9;
+        }
+
+        .command-item strong {
+            font-weight: 550;
+            color: #1c2e42;
+            font-size: 1rem;
+        }
+
+        .status {
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 40px;
+            min-width: 85px;
+            text-align: center;
+            background: #edf2f9;
+            color: #2b4b6f;
+            letter-spacing: 0.2px;
+            border: 1px solid #cddef5;
+        }
+
+        .status.done {
+            background: #e2f3e4;
+            color: #166b3b;
+            border-color: #b2e0ba;
+        }
+        .status.error {
+            background: #fde4e1;
+            color: #bb2d2d;
+            border-color: #fbc1bc;
+        }
+        .status.paid {
+            background: #ece3ff;
+            color: #583c9e;
+            border-color: #cbb8ff;
+        }
+        .status.moving {
+            background: #fff2db;
+            color: #aa6f1c;
+            border-color: #fad9a5;
+            animation: softPulse 1.4s infinite;
+        }
+
+        @keyframes softPulse {
+            0% { opacity: 1; background: #fff2db; }
+            50% { opacity: 0.7; background: #ffe6c0; }
+            100% { opacity: 1; background: #fff2db; }
+        }
+
+        .joint-visualization {
+            margin: 32px 0 8px;
+            background: #f9fcff;
+            border-radius: 20px;
+            padding: 22px;
+            border: 1px solid #e2ecfb;
+        }
+
+        .joint {
+            margin: 14px 0;
+        }
+        .joint-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #3e5670;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .joint-bar {
+            height: 24px;
+            background: #e2e9f2;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 4px #d0dcee;
+        }
+        .joint-fill {
+            height: 100%;
+            color: white;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 24px;
+            transition: width 0.5s ease;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            background: #3a6ea5;
+        }
+
+        small, .note {
+            color: #577594;
+            font-size: 0.8rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #eef3f9;
+            margin: 16px 0;
+        }
+
+        .flex-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .balance-badge {
+            background: #1e3e6e;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        [class*="emoji"], .emoji {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>UR5 <span>controller</span></h1>
+
+        <!-- Wallet section with LIVE BALANCE -->
+        <div class="wallet-section">
+            <h3>Wallet connection</h3>
+            <div id="walletInfo" style="display: none;">
+                <p>
+                    <span>Connected account</span>
+                    <strong id="walletAddress"></strong>
+                    <span id="walletBalance">100.0000 ETH</span>
+                    <button onclick="disconnectWallet()" style="margin-left:auto;">Disconnect</button>
+                </p>
+                <p style="font-size:0.85rem; color:#4a6a8a; margin-top:8px;">
+                    
+                </p>
+            </div>
+            <div id="connectWallet">
+                <p style="margin-bottom:10px; color:#2c455e;">1. Paste your MetaMask address (Ganache)</p>
+                <input type="text" id="walletInput" placeholder="0x... (42 characters)">
+                <button onclick="connectWallet()">Connect wallet</button>
+                <p class="note" style="margin-top:12px;">
+                    MetaMask network: Ganache (127.0.0.1:8545, Chain ID 1337)
+                </p>
+            </div>
+        </div>
+
+        <!-- Command input + quick actions -->
+        <div class="input-group">
+            <h3>Robot control</h3>
+            <input type="text" id="commandInput" placeholder="Enter command, e.g. wave hello, dance, spin 360">
+            <button onclick="sendCommand()" style="padding:14px 28px; width:100%; margin-bottom:18px;">Execute command</button>
+            <div class="quick-commands">
+                <button class="secondary" onclick="quickCommand('dance')">Dance</button>
+                <button class="secondary" onclick="quickCommand('wave hello')">Wave</button>
+                <button class="secondary" onclick="quickCommand('spin 360')">Spin 360</button>
+                <button class="secondary" onclick="quickCommand('pick up')">Pick up</button>
+            </div>
+        </div>
+
+        <!-- dynamic alert banner -->
+        <div id="alert" class="alert"></div>
+
+        <!-- Payment request panel with 100 ETH -->
+        <div id="paymentSection" class="payment-section">
+            <h3>Payment required</h3>
+            <p>Amount: <strong id="paymentAmount">100.00</strong> ETH</p>
+            <p>Action: <strong id="paymentAction">robot command</strong></p>
+            <p>Your balance after payment: <strong id="balanceAfterPayment">0.00 ETH</strong></p>
+            <div class="flex-row">
+                <button onclick="payWithETH()" style="background:#19563c;">Pay 100 ETH </button>
+                <button class="secondary" onclick="payWithBTC()">Pay with BTC</button>
+            </div>
+            <p class="note" style="margin-top:12px; color:#aa6f1c; font-weight:bold;">
+               
+            </p>
+        </div>
+
+        <!-- command history log -->
+        <div class="command-history">
+            <h3>Recent commands</h3>
+            <div id="commandHistory"></div>
+        </div>
+
+        <!-- robot joint visualization -->
+        <div id="robotVisualization" class="joint-visualization">
+            <!-- dynamic joint bars appear after command -->
+        </div>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────
+        // 100 ETH TEST BALANCE - YOU'RE RICH BRO! 💰
+        // ─────────────────────────────────────────────────────────
+        (function() {
+            let connectedWallet = null;
+            let lastCommandData = null;
+            let currentBalance = 100.0; // Starting with 100 ETH for testing
+
+            // helpers
+            function showAlert(message, type = 'success') {
+                const alert = document.getElementById('alert');
+                alert.textContent = message;
+                alert.className = `alert ${type}`;
+                alert.style.display = 'block';
+                setTimeout(() => { alert.style.display = 'none'; }, 6000);
+            }
+
+            function addToHistory(command, status = 'pending') {
+                const historyDiv = document.getElementById('commandHistory');
+                const commandId = Date.now();
+                const div = document.createElement('div');
+                div.className = 'command-item';
+                div.id = `cmd-${commandId}`;
+                let statusText = status.charAt(0).toUpperCase() + status.slice(1);
+                if (status === 'done') statusText = 'Executed';
+                else if (status === 'moving') statusText = 'Moving';
+                else if (status === 'paid') statusText = 'Paid (100 ETH)';
+                else if (status === 'error') statusText = 'Failed';
+                else if (status === 'pending') statusText = 'Pending';
+
+                div.innerHTML = `
+                    <strong>${command}</strong>
+                    <span class="status ${status}">${statusText}</span>
+                    <div style="font-size: 12px; color: #6883a5; width:100%; margin-top:6px;">
+                        Wallet: ${connectedWallet ? connectedWallet.substring(0,8)+'...' : '—'} | Balance: ${currentBalance.toFixed(2)} ETH
+                    </div>
+                `;
+                historyDiv.insertBefore(div, historyDiv.firstChild);
+                return div;
+            }
+
+            function updateLastCommandStatus(newStatus) {
+                const historyDiv = document.getElementById('commandHistory');
+                if (historyDiv.children.length === 0) return;
+                const statusSpan = historyDiv.children[0].querySelector('.status');
+                if (statusSpan) {
+                    let cleanStatus = newStatus.toLowerCase().replace(/[^a-z]/g,'');
+                    if (cleanStatus.includes('done') || cleanStatus.includes('executed')) cleanStatus = 'done';
+                    else if (cleanStatus.includes('moving')) cleanStatus = 'moving';
+                    else if (cleanStatus.includes('paid')) cleanStatus = 'paid';
+                    else if (cleanStatus.includes('error') || cleanStatus.includes('fail')) cleanStatus = 'error';
+                    statusSpan.className = `status ${cleanStatus}`;
+                    
+                    if (cleanStatus === 'paid') {
+                        statusSpan.textContent = 'Paid (100 ETH)';
+                    } else {
+                        let displayText = newStatus.replace(/[✅❌⏳]/g,'').trim();
+                        if (displayText === '' || displayText.length < 2) {
+                            if (cleanStatus === 'done') displayText = 'Executed';
+                            else if (cleanStatus === 'moving') displayText = 'Moving';
+                            else if (cleanStatus === 'error') displayText = 'Failed';
+                            else displayText = 'Pending';
+                        }
+                        statusSpan.textContent = displayText;
+                    }
+                }
+            }
+
+            // animate "Moving..."
+            function updateMovingIndicator() {
+                const items = document.querySelectorAll('.status.moving');
+                items.forEach(item => {
+                    if (item.textContent.includes('Moving')) {
+                        item.textContent = item.textContent === 'Moving' ? 'Moving.' : 'Moving';
+                    } else {
+                        item.textContent = 'Moving';
+                    }
+                });
+            }
+            setInterval(updateMovingIndicator, 600);
+
+            // robot joint visualization
+            function updateRobotVisualization(positions) {
+                const vis = document.getElementById('robotVisualization');
+                if (!vis || !Array.isArray(positions) || positions.length !== 6) return;
+
+                let html = '<h4 style="margin:0 0 16px; font-weight:500;">Joint angles (radians / degrees)</h4>';
+                positions.forEach((pos, i) => {
+                    const angle = (pos * 180 / Math.PI).toFixed(1);
+                    const width = Math.min(Math.abs(pos) * 50 + 10, 100);
+                    const color = pos > 0 ? '#2c6b4b' : (pos < 0 ? '#2a5f8a' : '#7a8faa');
+
+                    html += `
+                        <div class="joint">
+                            <div class="joint-label">Joint ${i+1}  ·  ${angle}°</div>
+                            <div class="joint-bar">
+                                <div class="joint-fill" style="width: ${width}%; background: ${color};">
+                                    ${angle}°
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                vis.innerHTML = html;
+            }
+
+            // update balance display
+            function updateBalanceDisplay() {
+                document.getElementById('walletBalance').textContent = currentBalance.toFixed(4) + ' ETH';
+                
+                const paymentAmount = 100.0;
+                const afterBalance = currentBalance - paymentAmount;
+                document.getElementById('balanceAfterPayment').textContent = 
+                    afterBalance.toFixed(4) + ' ETH';
+            }
+
+            // wallet connection
+            window.connectWallet = function() {
+                const input = document.getElementById('walletInput').value.trim();
+                if (!input || !input.startsWith('0x') || input.length !== 42) {
+                    showAlert('Enter a valid Ethereum address (0x + 40 hex chars)', 'error');
+                    return;
+                }
+
+                fetch('/connect_wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet_address: input })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        connectedWallet = input.toLowerCase();
+                        document.getElementById('connectWallet').style.display = 'none';
+                        document.getElementById('walletInfo').style.display = 'block';
+                        document.getElementById('walletAddress').textContent =
+                            input.substring(0,10) + '...' + input.substring(38);
+                        
+                        // Set initial balance to 100 ETH
+                        currentBalance = 100.0;
+                        updateBalanceDisplay();
+                        
+                        showAlert('💰 Connected! You have 100 ETH ', 'success');
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(err => showAlert('Connection failed: ' + err.message, 'error'));
+            };
+
+            window.disconnectWallet = function() {
+                connectedWallet = null;
+                document.getElementById('connectWallet').style.display = 'block';
+                document.getElementById('walletInfo').style.display = 'none';
+                document.getElementById('walletInput').value = '';
+                currentBalance = 0;
+                showAlert('Wallet disconnected', 'success');
+            };
+
+            // commands
+            window.sendCommand = async function() {
+                if (!connectedWallet) {
+                    showAlert('Connect a wallet first', 'error');
+                    return;
+                }
+
+                const command = document.getElementById('commandInput').value.trim();
+                if (!command) {
+                    showAlert('Enter a command', 'error');
+                    return;
+                }
+
+                addToHistory(command, 'moving');
+                document.getElementById('commandInput').value = '';
+
+                try {
+                    const response = await fetch('/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            command: command,
+                            wallet: connectedWallet
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        updateLastCommandStatus('done');
+                        showAlert(`Robot executing: ${command}`, 'success');
+                        lastCommandData = data;
+
+                        if (data.llm_response && Array.isArray(data.llm_response.joints)) {
+                            updateRobotVisualization(data.llm_response.joints);
+                            console.log('LLM joints:', data.llm_response.joints);
+                        }
+
+                        // Show payment section with 100 ETH
+                        setTimeout(() => {
+                            document.getElementById('paymentAmount').textContent = '100.00';
+                            document.getElementById('paymentAction').textContent = data.action || command;
+                            updateBalanceDisplay();
+                            document.getElementById('paymentSection').style.display = 'block';
+                            
+                            showAlert('💰 Payment required: 100 ETH', 'success');
+                        }, 2000);
+
+                    } else {
+                        updateLastCommandStatus('error');
+                        showAlert(data.message || 'Command failed', 'error');
+                    }
+
+                } catch (error) {
+                    updateLastCommandStatus('error');
+                    showAlert('Network error: ' + error.message, 'error');
+                }
+            };
+
+            window.quickCommand = function(cmd) {
+                document.getElementById('commandInput').value = cmd;
+                sendCommand();
+            };
+
+            // payments - 100 ETH TEST VERSION
+            window.payWithETH = async function() {
+                if (!connectedWallet) {
+                    showAlert('Connect wallet first', 'error');
+                    return;
+                }
+
+                const amount = 100.0; // Fixed 100 ETH for testing
+                
+                // Check if enough balance
+                if (currentBalance < amount) {
+                    showAlert(`Insufficient balance! You only have ${currentBalance.toFixed(2)} ETH`, 'error');
+                    return;
+                }
+
+                showAlert('💰 PROCESSING 100 ETH PAYMENT...', 'success');
+
+                // TEST MODE: Simulate payment without actual MetaMask transaction
+                setTimeout(() => {
+                    // Deduct 100 ETH
+                    currentBalance -= amount;
+                    
+                    // Update display
+                    document.getElementById('walletBalance').textContent = currentBalance.toFixed(4) + ' ETH';
+                    
+                    // Hide payment section
+                    document.getElementById('paymentSection').style.display = 'none';
+                    
+                    // Update status
+                    updateLastCommandStatus('paid');
+                    
+                    // Show success message
+                    showAlert(`✅ PAID: 100 ETH deducted! Remaining balance: ${currentBalance.toFixed(2)} ETH`, 'success');
+                    
+                    console.log(`TRANSACTION: 100 ETH paid from ${connectedWallet}`);
+                    
+                    // Update history item to show paid
+                    const historyDiv = document.getElementById('commandHistory');
+                    if (historyDiv.children.length > 0) {
+                        const walletInfo = historyDiv.children[0].querySelector('div[style*="font-size: 12px"]');
+                        if (walletInfo) {
+                            walletInfo.innerHTML = `Wallet: ${connectedWallet.substring(0,8)}... | Balance: ${currentBalance.toFixed(2)} ETH | Paid: 100 ETH`;
+                        }
+                    }
+                }, 1500);
+            };
+
+            window.payWithBTC = function() {test
+                showAlert('BTC not supported — use 100 ETH  payment.', 'error');
+            };
+
+            // detect MetaMask
+            window.addEventListener('load', () => {
+                if (window.ethereum) {
+                    console.log('MetaMask present - TEST MODE: 100 ETH balance');
+                }
+            });
+
+        })();
+    </script>
+</body>
+</html>
